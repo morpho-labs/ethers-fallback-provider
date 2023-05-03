@@ -1,21 +1,48 @@
-import { FallbackProvider } from "src/FallbackProvider";
-
-import { BaseProvider } from "@ethersproject/providers";
+import { FallbackProvider, checkNetworks, FallbackProviderError } from "../../src/FallbackProvider";
 
 import FailingProvider from "./helpers/FailingProvider";
 import MockProvider from "./helpers/MockProvider";
 
 describe("FallbackProvider", () => {
-  describe("perform", () => {
-    jest.mock("../../src/FallbackProvider", () => ({
-      ...jest.requireActual("../../src/FallbackProvider"),
-      checkNetworks: jest
-        .fn()
-        .mockImplementation(async (providers: BaseProvider[]) =>
-          providers[0].getNetwork().then((network) => ({ network, providers }))
-        ),
-    }));
+  beforeEach(() => {
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
 
+  describe("checkNetworks", () => {
+    it("should throw an error if no provider is provided", async () => {
+      await expect(checkNetworks([])).rejects.toThrowError(FallbackProviderError.NO_PROVIDER);
+    });
+    it("should throw an error if it cannot detect providers network", async () => {
+      const provider1 = new MockProvider("1", 0);
+      const provider2 = new MockProvider("2", 0);
+
+      await expect(checkNetworks([provider1, provider2])).rejects.toThrowError(
+        FallbackProviderError.CANNOT_DETECT_NETWORKS
+      );
+    });
+    it("should throw an error if all providers are not connected to the same network", async () => {
+      const provider1 = new MockProvider("1", 1);
+      const provider2 = new MockProvider("2", 2);
+
+      await expect(checkNetworks([provider1, provider2])).rejects.toThrowError(
+        FallbackProviderError.INCONSISTENT_NETWORKS
+      );
+    });
+    it("should return the providers' network and the list of available providers", async () => {
+      const provider1 = new MockProvider("1", 1);
+      const provider2 = new MockProvider("2", 0);
+      const provider3 = new MockProvider("3", 1);
+
+      const { network, providers } = await checkNetworks([provider1, provider2, provider3]);
+
+      expect(network.chainId).toEqual(1);
+      expect(providers).toHaveLength(2);
+      expect(providers[0]).toEqual(provider1);
+      expect(providers[1]).toEqual(provider3);
+    });
+  });
+
+  describe("perform", () => {
     it("should return the first value if the first provider is successful", async () => {
       const provider1 = new MockProvider("1");
       const provider2 = new MockProvider("2");
@@ -54,11 +81,7 @@ describe("FallbackProvider", () => {
       jest.spyOn(provider1, "perform");
       jest.spyOn(provider2, "perform");
 
-      try {
-        await provider.perform("send", {});
-      } catch (e) {
-        expect(e).toEqual(new Error("Failing provider used: 2"));
-      }
+      await expect(provider.perform("send", {})).rejects.toThrowError("Failing provider used: 2");
 
       expect(provider1.perform).toHaveBeenCalledTimes(1);
       expect(provider2.perform).toHaveBeenCalledTimes(1);

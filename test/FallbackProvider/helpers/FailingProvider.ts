@@ -1,11 +1,9 @@
-import { BaseProvider } from "@ethersproject/providers";
+import { BaseProvider, Network } from "@ethersproject/providers";
 
-export default class FailingProvider extends BaseProvider {
-  constructor(private _id: string) {
-    super(1);
-  }
+import MockProvider from "./MockProvider";
 
-  async perform() {
+export default class FailingProvider extends MockProvider {
+  async perform(): Promise<string> {
     throw Error("Failing provider used: " + this._id);
   }
 }

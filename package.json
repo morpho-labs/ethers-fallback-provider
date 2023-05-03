@@ -10,7 +10,7 @@
     "build": "tsc --build ./tsconfig.build.json",
     "lint": "eslint ./src --fix",
     "test:watch": "jest --watch",
-    "test": "jest --coverage",
+    "test": "jest ",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
