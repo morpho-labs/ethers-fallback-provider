@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "Package providing a fallback provider based on ethers package, adding more resilience.",
   "main": "lib/index.js",
-  "files": ["lib/*"],
+  "files": [
+    "lib/*"
+  ],
   "scripts": {
     "build": "tsc --build ./tsconfig.build.json",
     "lint": "eslint ./src --fix",
     "test:watch": "jest --watch",
-    "test": "jest --coverage --detectOpenHandles",
+    "test": "jest --coverage",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
@@ -19,7 +21,14 @@
   "engines": {
     "node": ">=12.0"
   },
-  "keywords": ["ethers", "fallback", "provider", "rpc", "call", "evm"],
+  "keywords": [
+    "ethers",
+    "fallback",
+    "provider",
+    "rpc",
+    "call",
+    "evm"
+  ],
   "bugs": {
     "url": "https://github.com/morpho-labs/ethers-fallback-provider/issues"
   },
@@ -50,7 +59,9 @@
     "*.ts": "eslint --cache --cache-location .eslintcache --fix"
   },
   "release": {
-    "branches": ["main"],
+    "branches": [
+      "main"
+    ],
     "plugins": [
       [
         "@semantic-release/commit-analyzer",
@@ -93,10 +104,15 @@
     ]
   },
   "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "testTimeout": 30000,
-    "testMatch": ["<rootDir>/test/**/*.spec.ts"],
-    "collectCoverageFrom": ["<rootDir>/src/**/*.ts", "!<rootDir>/src/types/**/*.ts"]
+    "verbose": true,
+    "testTimeout": 15000,
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testRegex": "(.*|(\\.|/)(test|spec)+)\\.test\\.(js|ts)$",
+    "moduleFileExtensions": [
+      "js",
+      "ts"
+    ]
   }
 }
