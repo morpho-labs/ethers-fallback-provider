@@ -2,45 +2,42 @@ import { BaseProvider, Network } from "@ethersproject/providers";
 
 import { promiseWithTimeout } from "../utils/promises";
 
-export const checkNetworks = (providers: BaseProvider[]) =>
-  Promise.all(providers.map((p) => p.getNetwork().catch(() => null))).then(
-    (providersNetworks) => {
-      const availableNetworks: Network[] = [];
-      const availableProviders: BaseProvider[] = [];
-      providersNetworks.forEach((network, i) => {
-        if (!network) return;
-        availableNetworks.push(network);
-        availableProviders.push(providers[i]);
-      });
+export const checkNetworks = async (providers: BaseProvider[]) => {
+  const networks = await Promise.all(providers.map((p) => p.getNetwork().catch(() => null)));
+  const availableNetworks: Network[] = [];
+  const availableProviders: BaseProvider[] = [];
+  networks.forEach((network, i) => {
+    if (!network) return;
+    availableNetworks.push(network);
+    availableProviders.push(providers[i]);
+  });
 
-      if (availableProviders.length === 0)
-        throw new Error("Could not detect providers networks");
+  if (availableProviders.length === 0) throw new Error("Could not detect providers networks");
 
-      const defaultNetwork = availableNetworks[0];
+  const defaultNetwork = availableNetworks[0];
 
-      if (availableNetworks.find((n) => n.chainId !== defaultNetwork.chainId))
-        throw new Error("All providers must be connected to the same network");
+  if (availableNetworks.find((n) => n.chainId !== defaultNetwork.chainId))
+    throw new Error("All providers must be connected to the same network");
 
-      providers.splice(0, providers.length, ...availableProviders); // We only wanna keep the providers that could return a network
-      return defaultNetwork;
-    }
-  );
+  return { network: defaultNetwork, providers };
+};
 
 export class FallbackProvider extends BaseProvider {
-  constructor(
-    private _providers: BaseProvider[],
-    private _requestTimeout = 3000
-  ) {
-    if (_providers.length === 0)
-      throw new Error("At least one provider must be provided");
+  constructor(private _providers: BaseProvider[], private _requestTimeout = 3000) {
+    if (_providers.length === 0) throw new Error("At least one provider must be provided");
 
-    const network = checkNetworks(_providers);
+    const networkAndProviders = checkNetworks(_providers);
+
+    const network = networkAndProviders.then(({ network, providers }) => {
+      this._providers = providers;
+      return network;
+    });
 
     super(network);
   }
 
   async detectNetwork(): Promise<Network> {
-    return checkNetworks(this._providers);
+    return checkNetworks(this._providers).then(({ network }) => network);
   }
 
   private async performWithProvider(
