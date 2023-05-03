@@ -2,7 +2,15 @@ import { BaseProvider, Network } from "@ethersproject/providers";
 
 import { promiseWithTimeout } from "../utils/promises";
 
+export enum FallbackProviderError {
+  NO_PROVIDER = "At least one provider must be provided",
+  CANNOT_DETECT_NETWORKS = "Could not detect providers networks",
+  INCONSISTENT_NETWORKS = "All providers must be connected to the same network",
+}
+
 export const checkNetworks = async (providers: BaseProvider[]) => {
+  if (providers.length === 0) throw new Error(FallbackProviderError.NO_PROVIDER);
+
   const networks = await Promise.all(providers.map((p) => p.getNetwork().catch(() => null)));
   const availableNetworks: Network[] = [];
   const availableProviders: BaseProvider[] = [];
@@ -12,20 +20,21 @@ export const checkNetworks = async (providers: BaseProvider[]) => {
     availableProviders.push(providers[i]);
   });
 
-  if (availableProviders.length === 0) throw new Error("Could not detect providers networks");
+  if (availableProviders.length === 0)
+    throw new Error(FallbackProviderError.CANNOT_DETECT_NETWORKS);
 
   const defaultNetwork = availableNetworks[0];
 
   if (availableNetworks.find((n) => n.chainId !== defaultNetwork.chainId))
-    throw new Error("All providers must be connected to the same network");
+    throw new Error(FallbackProviderError.INCONSISTENT_NETWORKS);
 
-  return { network: defaultNetwork, providers };
+  return { network: defaultNetwork, providers: availableProviders };
 };
 
 export class FallbackProvider extends BaseProvider {
-  constructor(private _providers: BaseProvider[], private _requestTimeout = 3000) {
-    if (_providers.length === 0) throw new Error("At least one provider must be provided");
+  private _providers: BaseProvider[] = [];
 
+  constructor(_providers: BaseProvider[], private _requestTimeout = 3000) {
     const networkAndProviders = checkNetworks(_providers);
 
     const network = networkAndProviders.then(({ network, providers }) => {
@@ -51,7 +60,7 @@ export class FallbackProvider extends BaseProvider {
         this._requestTimeout
       );
     } catch (e) {
-      if (providerIndex === this._providers.length - 1) throw e;
+      if (providerIndex >= this._providers.length - 1) throw e;
       // eslint-disable-next-line no-console
       console.warn(
         `[FallbackProvider] Call to \`${method}\` failing with provider n°${providerIndex}, retrying with provider n°${
@@ -63,6 +72,7 @@ export class FallbackProvider extends BaseProvider {
   }
 
   async perform(method: string, params: { [name: string]: any }): Promise<any> {
+    await this._ready();
     return this.performWithProvider(0, method, params);
   }
 }
