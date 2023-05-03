@@ -1,4 +1,8 @@
-import { FallbackProvider, checkNetworks, FallbackProviderError } from "../../src/FallbackProvider";
+import {
+  FallbackProvider,
+  validateAndGetNetwork,
+  FallbackProviderError,
+} from "../../src/FallbackProvider";
 
 import FailingProvider from "./helpers/FailingProvider";
 import MockProvider from "./helpers/MockProvider";
@@ -8,15 +12,17 @@ describe("FallbackProvider", () => {
     jest.spyOn(console, "warn").mockImplementation(() => {});
   });
 
-  describe("checkNetworks", () => {
+  describe("validateAndGetNetwork", () => {
     it("should throw an error if no provider is provided", async () => {
-      await expect(checkNetworks([])).rejects.toThrowError(FallbackProviderError.NO_PROVIDER);
+      await expect(validateAndGetNetwork([])).rejects.toThrowError(
+        FallbackProviderError.NO_PROVIDER
+      );
     });
     it("should throw an error if it cannot detect providers network", async () => {
       const provider1 = new MockProvider("1", 0);
       const provider2 = new MockProvider("2", 0);
 
-      await expect(checkNetworks([provider1, provider2])).rejects.toThrowError(
+      await expect(validateAndGetNetwork([provider1, provider2])).rejects.toThrowError(
         FallbackProviderError.CANNOT_DETECT_NETWORKS
       );
     });
@@ -24,7 +30,7 @@ describe("FallbackProvider", () => {
       const provider1 = new MockProvider("1", 1);
       const provider2 = new MockProvider("2", 2);
 
-      await expect(checkNetworks([provider1, provider2])).rejects.toThrowError(
+      await expect(validateAndGetNetwork([provider1, provider2])).rejects.toThrowError(
         FallbackProviderError.INCONSISTENT_NETWORKS
       );
     });
@@ -33,7 +39,7 @@ describe("FallbackProvider", () => {
       const provider2 = new MockProvider("2", 0);
       const provider3 = new MockProvider("3", 1);
 
-      const { network, providers } = await checkNetworks([provider1, provider2, provider3]);
+      const { network, providers } = await validateAndGetNetwork([provider1, provider2, provider3]);
 
       expect(network.chainId).toEqual(1);
       expect(providers).toHaveLength(2);

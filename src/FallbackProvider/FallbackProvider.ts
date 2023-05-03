@@ -8,7 +8,7 @@ export enum FallbackProviderError {
   INCONSISTENT_NETWORKS = "All providers must be connected to the same network",
 }
 
-export const checkNetworks = async (providers: BaseProvider[]) => {
+export const validateAndGetNetwork = async (providers: BaseProvider[]) => {
   if (providers.length === 0) throw new Error(FallbackProviderError.NO_PROVIDER);
 
   const networks = await Promise.all(providers.map((p) => p.getNetwork().catch(() => null)));
@@ -35,7 +35,7 @@ export class FallbackProvider extends BaseProvider {
   private _providers: BaseProvider[] = [];
 
   constructor(_providers: BaseProvider[], private _requestTimeout = 3000) {
-    const networkAndProviders = checkNetworks(_providers);
+    const networkAndProviders = validateAndGetNetwork(_providers);
 
     const network = networkAndProviders.then(({ network, providers }) => {
       this._providers = providers;
@@ -46,7 +46,7 @@ export class FallbackProvider extends BaseProvider {
   }
 
   async detectNetwork(): Promise<Network> {
-    return checkNetworks(this._providers).then(({ network }) => network);
+    return validateAndGetNetwork(this._providers).then(({ network }) => network);
   }
 
   private async performWithProvider(
