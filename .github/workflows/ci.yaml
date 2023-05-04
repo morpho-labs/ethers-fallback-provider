@@ -34,12 +34,6 @@ jobs:
       - name: Build package
         run: yarn build
 
-      - name: Export build
-        uses: actions/upload-artifact@v2
-        with:
-          name: lib-${{ matrix.node-version }}
-          path: lib
-
   test:
     runs-on: ubuntu-latest
     strategy:
