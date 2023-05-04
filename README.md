@@ -19,17 +19,17 @@ The purpose is more to have resilience if one provider fails, rather than having
 
 ## Installation
 ```bash
-npm install ethers-fallback-provider
+npm install @morpho-labs/ethers-fallback-provider
 ```
 or
 ```bash
-yarn add ethers-fallback-provider
+yarn add @morpho-labs/ethers-fallback-provider
 ```
 
 ## Usage
 
 ```typescript
-import FallbackProvider from 'ethers-fallback-provider';
+import FallbackProvider from '@morpho-labs/ethers-fallback-provider';
 
 import { 
     InfuraProvider, 

@@ -1,7 +1,7 @@
 {
-  "name": "ethers-fallback-provider",
+  "name": "@morpho-labs/ethers-fallback-provider",
   "version": "1.0.0",
-  "description": "Package providing a fallback provider based on ethers package, adding more resilience.",
+  "description": "Package providing a fallback provider based on ethers-providers, adding more resilience.",
   "main": "lib/index.js",
   "files": [
     "lib/*"
