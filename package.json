@@ -1,14 +1,14 @@
 {
-  "name": "ethers-fallback-provider",
+  "name": "@morpho-labs/ethers-fallback-provider",
   "version": "1.0.0",
-  "description": "Package providing a fallback provider based on ethers package, adding more resilience.",
+  "description": "Package providing a fallback provider based on ethers-providers, adding more resilience.",
   "main": "lib/index.js",
   "files": [
     "lib/*"
   ],
   "scripts": {
     "build": "tsc --build ./tsconfig.build.json",
-    "lint": "eslint ./src --fix",
+    "lint": "eslint ./src ./test --fix",
     "test:watch": "jest --watch",
     "test": "jest",
     "typecheck": "tsc --noEmit"
@@ -19,7 +19,7 @@
   },
   "license": "MIT",
   "engines": {
-    "node": ">=12.0"
+    "node": ">=14.0"
   },
   "keywords": [
     "ethers",
