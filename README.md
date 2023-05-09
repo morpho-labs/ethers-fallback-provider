@@ -52,8 +52,8 @@ const blockNumber = await provider.getBlockNumber();
 ```
 
 
-[build-img]: https://github.com/morpho-labs/ethers-fallback-provider/actions/workflows/ci.yml/badge.svg?branch=main
-[build-url]: https://github.com/morpho-labs/ethers-fallback-provider/actions/workflows/ci.yml
+[build-img]: https://github.com/morpho-labs/ethers-fallback-provider/actions/workflows/ci.yaml/badge.svg?branch=main
+[build-url]: https://github.com/morpho-labs/ethers-fallback-provider/actions/workflows/ci.yaml
 [downloads-img]: https://img.shields.io/npm/dt/ethers-multicall-provider
 [downloads-url]: https://www.npmtrends.com/ethers-multicall-provider
 [npm-img]: https://img.shields.io/npm/v/ethers-multicall-provider
