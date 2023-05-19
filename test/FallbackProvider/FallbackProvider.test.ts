@@ -92,5 +92,34 @@ describe("FallbackProvider", () => {
       expect(provider1.perform).toHaveBeenCalledTimes(1);
       expect(provider2.perform).toHaveBeenCalledTimes(1);
     });
+
+    it("should retry the first provider", async () => {
+      const provider1 = new FailingProvider("1", 1);
+      const provider2 = new FailingProvider("2");
+      const provider = new FallbackProvider([{ provider: provider1, retries: 1 }, provider2]);
+
+      jest.spyOn(provider1, "perform");
+      jest.spyOn(provider2, "perform");
+
+      const res = await provider.perform("send", {});
+
+      expect(provider1.perform).toHaveBeenCalledTimes(2);
+      expect(provider2.perform).not.toHaveBeenCalled();
+      expect(res).toEqual("1");
+    });
+    it("should fallback after max retries reached", async () => {
+      const provider1 = new FailingProvider("1", 2);
+      const provider2 = new MockProvider("2");
+      const provider = new FallbackProvider([{ provider: provider1, retries: 1 }, provider2]);
+
+      jest.spyOn(provider1, "perform");
+      jest.spyOn(provider2, "perform");
+
+      const res = await provider.perform("send", {});
+
+      expect(provider1.perform).toHaveBeenCalledTimes(2);
+      expect(provider2.perform).toHaveBeenCalledTimes(1);
+      expect(res).toEqual("2");
+    });
   });
 });
