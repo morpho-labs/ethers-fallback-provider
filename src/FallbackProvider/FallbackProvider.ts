@@ -1,6 +1,7 @@
 import { BaseProvider, Network } from "@ethersproject/providers";
 
-import { promiseWithTimeout } from "../utils/promises";
+import { promiseWithTimeout, wait } from "../utils/promises";
+import { Logger } from "@ethersproject/logger";
 
 export enum FallbackProviderError {
   NO_PROVIDER = "At least one provider must be provided",
@@ -9,13 +10,16 @@ export enum FallbackProviderError {
 }
 export const DEFAULT_RETRIES = 0;
 export const DEFAULT_TIMEOUT = 3_000;
+export const RETRY_DELAY = 100;
 
 export interface ProviderConfig {
   provider: BaseProvider;
   retries?: number;
   timeout?: number;
+  retryDelay?: number;
 }
 
+const logger = new Logger("FallbackProvider");
 const isProviderConfig = (provider: BaseProvider | ProviderConfig): provider is ProviderConfig =>
   (provider as ProviderConfig).provider !== undefined;
 
@@ -69,15 +73,18 @@ export class FallbackProvider extends BaseProvider {
     params: { [name: string]: any },
     retries = 0
   ): Promise<any> {
-    const { provider, retries: maxRetries, timeout } = this._providers[providerIndex];
+    const { provider, retries: maxRetries, timeout, retryDelay } = this._providers[providerIndex];
     try {
       return await promiseWithTimeout(provider.perform(method, params), timeout ?? DEFAULT_TIMEOUT);
     } catch (e) {
-      if (retries++ < (maxRetries ?? DEFAULT_RETRIES))
+      if (retries++ < (maxRetries ?? DEFAULT_RETRIES)) {
+        // Wait for a random time before retrying.
+        await wait(Math.ceil(Math.random() * (retryDelay ?? RETRY_DELAY)));
         return this.performWithProvider(providerIndex, method, params, retries);
+      }
       if (providerIndex >= this._providers.length - 1) throw e;
-      // eslint-disable-next-line no-console
-      console.warn(
+
+      logger.warn(
         `[FallbackProvider] Call to \`${method}\` failing with provider n°${providerIndex}, retrying with provider n°${providerIndex +
           1}\n\n${e}`
       );
