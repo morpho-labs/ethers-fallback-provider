@@ -43,8 +43,8 @@ describe("FallbackProvider", () => {
 
       expect(network.chainId).toEqual(1);
       expect(providers).toHaveLength(2);
-      expect(providers[0]).toEqual(provider1);
-      expect(providers[1]).toEqual(provider3);
+      expect(providers[0].provider).toEqual(provider1);
+      expect(providers[1].provider).toEqual(provider3);
     });
   });
 
