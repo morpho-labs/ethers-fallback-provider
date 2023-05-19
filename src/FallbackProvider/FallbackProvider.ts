@@ -79,7 +79,11 @@ export class FallbackProvider extends BaseProvider {
     } catch (e) {
       if (retries++ < (maxRetries ?? DEFAULT_RETRIES)) {
         // Wait for a random time before retrying.
-        await wait(Math.ceil(Math.random() * (retryDelay ?? RETRY_DELAY)));
+        const delay = Math.ceil(Math.random() * (retryDelay ?? RETRY_DELAY));
+        logger.debug(
+          `[FallbackProvider] Call to \`${method}\` failing with provider n°${providerIndex}, retrying in ${delay}ms (${retries}/${maxRetries}) \n\n${e}`
+        );
+        await wait(delay);
         return this.performWithProvider(providerIndex, method, params, retries);
       }
       if (providerIndex >= this._providers.length - 1) throw e;
