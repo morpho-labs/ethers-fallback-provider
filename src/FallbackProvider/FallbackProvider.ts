@@ -1,23 +1,41 @@
 import { BaseProvider, Network } from "@ethersproject/providers";
 
-import { promiseWithTimeout } from "../utils/promises";
+import { promiseWithTimeout, wait } from "../utils/promises";
+import { Logger } from "@ethersproject/logger";
 
 export enum FallbackProviderError {
   NO_PROVIDER = "At least one provider must be provided",
   CANNOT_DETECT_NETWORKS = "Could not detect providers networks",
   INCONSISTENT_NETWORKS = "All providers must be connected to the same network",
 }
+export const DEFAULT_RETRIES = 0;
+export const DEFAULT_TIMEOUT = 3_000;
+export const RETRY_DELAY = 100;
 
-export const validateAndGetNetwork = async (providers: BaseProvider[]) => {
+export interface ProviderConfig {
+  provider: BaseProvider;
+  retries?: number;
+  timeout?: number;
+  retryDelay?: number;
+}
+
+const logger = new Logger("FallbackProvider");
+const isProviderConfig = (provider: BaseProvider | ProviderConfig): provider is ProviderConfig =>
+  (provider as ProviderConfig).provider !== undefined;
+
+export const validateAndGetNetwork = async (providers: (BaseProvider | ProviderConfig)[]) => {
+  const providerConfigs = providers.map(p => (isProviderConfig(p) ? p : { provider: p }));
   if (providers.length === 0) throw new Error(FallbackProviderError.NO_PROVIDER);
 
-  const networks = await Promise.all(providers.map((p) => p.getNetwork().catch(() => null)));
+  const networks = await Promise.all(
+    providerConfigs.map(({ provider }) => provider.getNetwork().catch(() => null))
+  );
   const availableNetworks: Network[] = [];
-  const availableProviders: BaseProvider[] = [];
+  const availableProviders: ProviderConfig[] = [];
   networks.forEach((network, i) => {
     if (!network) return;
     availableNetworks.push(network);
-    availableProviders.push(providers[i]);
+    availableProviders.push(providerConfigs[i]);
   });
 
   if (availableProviders.length === 0)
@@ -25,16 +43,16 @@ export const validateAndGetNetwork = async (providers: BaseProvider[]) => {
 
   const defaultNetwork = availableNetworks[0];
 
-  if (availableNetworks.find((n) => n.chainId !== defaultNetwork.chainId))
+  if (availableNetworks.find(n => n.chainId !== defaultNetwork.chainId))
     throw new Error(FallbackProviderError.INCONSISTENT_NETWORKS);
 
   return { network: defaultNetwork, providers: availableProviders };
 };
 
 export class FallbackProvider extends BaseProvider {
-  private _providers: BaseProvider[] = [];
+  private _providers: ProviderConfig[] = [];
 
-  constructor(_providers: BaseProvider[], private _requestTimeout = 3000) {
+  constructor(_providers: (BaseProvider | ProviderConfig)[]) {
     const networkAndProviders = validateAndGetNetwork(_providers);
 
     const network = networkAndProviders.then(({ network, providers }) => {
@@ -52,20 +70,28 @@ export class FallbackProvider extends BaseProvider {
   private async performWithProvider(
     providerIndex: number,
     method: string,
-    params: { [name: string]: any }
+    params: { [name: string]: any },
+    retries = 0
   ): Promise<any> {
+    const { provider, retries: maxRetries, timeout, retryDelay } = this._providers[providerIndex];
     try {
-      return await promiseWithTimeout(
-        this._providers[providerIndex].perform(method, params),
-        this._requestTimeout
-      );
+      return await promiseWithTimeout(provider.perform(method, params), timeout ?? DEFAULT_TIMEOUT);
     } catch (e) {
+      if (retries < (maxRetries ?? DEFAULT_RETRIES)) {
+        // Wait for a random time before retrying.
+        const delay = Math.ceil(Math.random() * (retryDelay ?? RETRY_DELAY));
+        logger.debug(
+          `[FallbackProvider] Call to \`${method}\` failing with provider n°${providerIndex}, retrying in ${delay}ms (${retries +
+            1}/${maxRetries}) \n\n${e}`
+        );
+        await wait(delay);
+        return this.performWithProvider(providerIndex, method, params, retries + 1);
+      }
       if (providerIndex >= this._providers.length - 1) throw e;
-      // eslint-disable-next-line no-console
-      console.warn(
-        `[FallbackProvider] Call to \`${method}\` failing with provider n°${providerIndex}, retrying with provider n°${
-          providerIndex + 1
-        }\n\n${e}`
+
+      logger.warn(
+        `[FallbackProvider] Call to \`${method}\` failing with provider n°${providerIndex}, retrying with provider n°${providerIndex +
+          1}\n\n${e}`
       );
       return this.performWithProvider(providerIndex + 1, method, params);
     }

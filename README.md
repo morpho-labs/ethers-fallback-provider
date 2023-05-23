@@ -41,7 +41,12 @@ import {
 const timeout = 1000; // 1 second, optionnal, default is 3000ms
 
 const provider = new FallbackProvider([
-    new InfuraProvider('mainnet', 'your-api-key'),
+    {
+        provider: new InfuraProvider('mainnet', 'your-api-key'),
+        retries: 3, // retry after a timeout or an error 3 times, default is 0.
+        timeout,
+        retryDelay: 1000 // wait a random time less than 1 second before retrying. Default is 0.
+    },
     new AlchemyProvider('mainnet', 'your-api-key'),
     getDefaultProvider('mainnet')
 ]);
